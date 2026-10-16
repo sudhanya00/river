@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>River (prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E6EEEA; --mist:#D2E1DB; --water:#4C7F86; --deep:#1E3F47;
+  --paper:#FCFBF7; --ink:#18282D; --muted:#566A6E; --line:rgba(30,63,71,.16);
+  --marigold:#D4871C; --marigold-ink:#2A1800; --boat:#FCFBF7;
+  --btn-bg:#1E3F47; --btn-ink:#FCFBF7; --err:#A3361F;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1F24; --mist:#15303A; --water:#2B5963; --deep:#0A171B;
+    --paper:#1A2E35; --ink:#E4ECEA; --muted:#93A7AA; --line:rgba(228,236,234,.14);
+    --marigold:#EBA53F; --marigold-ink:#2A1800; --boat:#DCE6E3;
+    --btn-bg:#E4ECEA; --btn-ink:#0E1F24; --err:#F08A70;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1F24; --mist:#15303A; --water:#2B5963; --deep:#0A171B;
+  --paper:#1A2E35; --ink:#E4ECEA; --muted:#93A7AA; --line:rgba(228,236,234,.14);
+  --marigold:#EBA53F; --marigold-ink:#2A1800; --boat:#DCE6E3;
+  --btn-bg:#E4ECEA; --btn-ink:#0E1F24; --err:#F08A70;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font-family:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,textarea,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--marigold);outline-offset:2px}
+
+.app{max-width:460px;margin:0 auto;min-height:100%;padding:0 18px 110px}
+.top{display:flex;align-items:center;gap:12px;padding:16px 0 10px}
+.mark{font-family:'Newsreader',Georgia,serif;font-style:italic;font-size:1.75rem;letter-spacing:-.01em;line-height:1}
+.count{font-size:.85rem;color:var(--muted);margin-left:auto}
+.proto-btn{border:1px dashed var(--line);background:transparent;border-radius:999px;padding:4px 10px;font-size:.78rem;color:var(--muted)}
+
+.view{display:none}
+.view.active{display:block}
+
+/* River scene: the one bold element */
+.scene{position:relative;margin:4px -18px 0;height:190px;overflow:hidden;background:var(--mist)}
+.scene svg{display:block;width:100%;height:100%}
+.wave{animation:flow 9s linear infinite}
+.wave.w2{animation-duration:13s}
+.wave.w3{animation-duration:6s}
+@keyframes flow{from{transform:translateX(0)}to{transform:translateX(-200px)}}
+.drift{animation:drift 22s linear infinite}
+.drift.d2{animation-duration:30s;animation-delay:-12s}
+.drift.d3{animation-duration:26s;animation-delay:-20s}
+.drift.d4{animation-duration:34s;animation-delay:-5s}
+.drift.d5{animation-duration:19s;animation-delay:-9s}
+@keyframes drift{from{transform:translateX(-60px)}to{transform:translateX(460px)}}
+.ripple{transform-box:fill-box;transform-origin:center;opacity:0}
+.ripple.go{animation:ripple .9s ease-out}
+@keyframes ripple{0%{opacity:.9;transform:scale(.2)}100%{opacity:0;transform:scale(3)}}
+
+.catch{display:block;width:100%;margin:-26px 0 0;position:relative;border:0;border-radius:14px;
+  background:var(--marigold);color:var(--marigold-ink);font-weight:600;font-size:1.05rem;padding:15px;box-shadow:0 6px 18px rgba(30,63,71,.18)}
+.catch:active{transform:translateY(1px)}
+
+#stage{margin-top:22px}
+.hint{color:var(--muted);font-size:.95rem;margin:0}
+
+.letter{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:22px 20px 18px;
+  box-shadow:0 1px 0 var(--line),0 10px 30px rgba(14,31,36,.08);transform-origin:top center}
+.letter.unfold{animation:unfold .55s cubic-bezier(.2,.8,.2,1)}
+@keyframes unfold{from{opacity:0;transform:perspective(700px) rotateX(-70deg)}to{opacity:1;transform:none}}
+.msg{font-family:'Newsreader',Georgia,serif;font-size:1.3rem;line-height:1.6;margin:0 0 14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.meta{font-size:.85rem;color:var(--muted);margin:0 0 16px}
+.reveal{border-top:4px solid var(--marigold)}
+.reveal h2{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:1.5rem;margin:0 0 12px}
+.stats{font-size:.95rem;margin:0 0 14px}
+.notes{list-style:none;padding:0;margin:0 0 16px;display:grid;gap:8px}
+.notes li{background:var(--bg);border-left:3px solid var(--marigold);padding:8px 12px;font-family:'Newsreader',Georgia,serif;font-style:italic;font-size:1.02rem}
+
+.note-box{border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
+label,legend{font-weight:500;font-size:.95rem}
+textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;resize:vertical;margin-top:6px}
+.small{font-size:.8rem;color:var(--muted)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.err{color:var(--err);font-size:.85rem;margin:6px 0 0;min-height:1em}
+.actions{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
+
+.btn{border:1px solid var(--line);background:transparent;border-radius:10px;padding:9px 16px;font-weight:500}
+.btn.primary{background:var(--btn-bg);color:var(--btn-ink);border-color:transparent;width:100%;padding:13px;font-weight:600;margin-top:14px}
+.btn.solid{background:var(--btn-bg);color:var(--btn-ink);border-color:transparent}
+.link{border:0;background:none;padding:6px 0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-size:.88rem}
+
+.calm{text-align:left}
+.calm h2{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:1.4rem;margin:0 0 6px}
+.calm p{margin:0 0 14px;color:var(--muted)}
+.ad{margin-top:22px;border:1px dashed var(--line);border-radius:8px;padding:18px;text-align:center;color:var(--muted);font-size:.8rem}
+
+.h{font-family:'Newsreader',Georgia,serif;font-weight:500;font-size:1.7rem;margin:14px 0 4px;line-height:1.2}
+.sub{color:var(--muted);margin:0 0 16px}
+#msg{font-family:'Newsreader',Georgia,serif;font-size:1.15rem;line-height:1.55;background:var(--paper)}
+fieldset{border:0;padding:0;margin:20px 0 0}
+.opts{display:grid;gap:8px;margin-top:8px}
+.opt{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--paper);cursor:pointer}
+.opt input{accent-color:var(--marigold);margin-top:4px}
+.opt b{display:block;font-weight:600}
+.opt span{font-size:.85rem;color:var(--muted)}
+.opt:has(input:checked){border-color:var(--marigold)}
+.sent{text-align:center;padding:30px 10px}
+.sent p{color:var(--muted)}
+.sent svg{width:90px;height:60px}
+.sent .away{animation:away 2.4s ease-in forwards}
+@keyframes away{0%{transform:translate(0,0)}100%{transform:translate(120px,-6px);opacity:0}}
+
+.drifting{font-family:'Newsreader',Georgia,serif;font-size:1.25rem;margin:14px 0 4px}
+.kept{display:grid;gap:14px;margin-top:22px}
+.kept .letter{padding:18px}
+.kept .msg{font-size:1.12rem}
+details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);
+  padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
+.tabs .inner{display:flex;width:100%;max-width:460px}
+.tab{flex:1;border:0;background:none;padding:10px 4px;font-size:.92rem;color:var(--muted);font-weight:500}
+.tab[aria-selected="true"]{color:var(--ink)}
+.tab[aria-selected="true"]::after{content:"";display:block;width:18px;height:3px;border-radius:2px;background:var(--marigold);margin:4px auto 0}
+
+.sheet{position:fixed;inset:0;background:rgba(10,23,27,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet[hidden]{display:none}
+.sheet-in{background:var(--paper);width:100%;max-width:460px;border-radius:16px 16px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));max-height:85%;overflow:auto}
+.sheet-in h2{margin:0 0 4px;font-size:1.1rem}
+.skips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.debug{font-size:.82rem;color:var(--muted);margin:10px 0;padding-left:18px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);
+  background:var(--btn-bg);color:var(--btn-ink);padding:10px 16px;border-radius:10px;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s;max-width:90%;z-index:30}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion: reduce){
+  .wave,.drift,.letter.unfold,.ripple.go,.sent .away{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="mark">river</div>
+    <div class="count" id="count"></div>
+    <button class="proto-btn" id="protoBtn">Prototype</button>
+  </header>
+
+  <main>
+    <section id="view-river" class="view active" aria-label="River">
+      <div class="scene" aria-hidden="true">
+        <svg viewBox="0 0 400 190" preserveAspectRatio="xMidYMid slice">
+          <g class="wave w2" opacity=".45"><path fill="var(--water)" d="M0 70 Q50 58 100 70 T200 70 T300 70 T400 70 T500 70 T600 70 T700 70 T800 70 V190 H0Z"/></g>
+          <g transform="translate(0,62)"><g class="drift d2"><path fill="var(--boat)" d="M0 10 L26 10 L20 18 L6 18Z M9 10 L13 0 L17 10Z"/></g></g>
+          <g transform="translate(0,74)"><g class="drift d4"><circle r="4" cx="0" cy="0" fill="var(--marigold)"/></g></g>
+          <g class="wave" opacity=".7"><path fill="var(--water)" d="M0 100 Q50 86 100 100 T200 100 T300 100 T400 100 T500 100 T600 100 T700 100 T800 100 V190 H0Z"/></g>
+          <g transform="translate(0,92)"><g class="drift"><path fill="var(--boat)" d="M0 12 L32 12 L25 22 L7 22Z M11 12 L16 0 L21 12Z"/></g></g>
+          <g transform="translate(0,108)"><g class="drift d5"><circle r="5" cx="0" cy="0" fill="var(--marigold)"/></g></g>
+          <circle class="ripple" id="ripple" cx="200" cy="125" r="18" fill="none" stroke="var(--boat)" stroke-width="2"/>
+          <g class="wave w3"><path fill="var(--water)" d="M0 130 Q50 118 100 130 T200 130 T300 130 T400 130 T500 130 T600 130 T700 130 T800 130 V190 H0Z"/></g>
+          <g transform="translate(0,124)"><g class="drift d3"><path fill="var(--boat)" d="M0 12 L30 12 L24 21 L6 21Z M10 12 L15 1 L20 12Z"/></g></g>
+        </svg>
+      </div>
+      <button class="catch" id="catchBtn">Catch a message</button>
+      <div id="stage" aria-live="polite"></div>
+    </section>
+
+    <section id="view-write" class="view" aria-label="Write">
+      <div id="writeForm">
+        <h1 class="h">Write to a stranger</h1>
+        <p class="sub">Someone will catch this. One day, so will you.</p>
+        <label for="msg" class="small">Your message</label>
+        <textarea id="msg" maxlength="500" rows="7" placeholder="What do you want someone to read today?"></textarea>
+        <div class="row small"><span id="chars">0 / 500</span><span id="writesLeft"></span></div>
+        <fieldset>
+          <legend>When should it come back to you?</legend>
+          <div class="opts">
+            <label class="opt"><input type="radio" name="when" value="near"><div><b>Near future</b><span>Within a few months</span></div></label>
+            <label class="opt"><input type="radio" name="when" value="any" checked><div><b>Anytime</b><span>Next month, or years from now</span></div></label>
+            <label class="opt"><input type="radio" name="when" value="far"><div><b>No time soon</b><span>Years from now</span></div></label>
+          </div>
+        </fieldset>
+        <p class="err" id="writeErr"></p>
+        <button class="btn primary" id="send">Let it drift</button>
+      </div>
+      <div id="sentBox" class="sent" hidden>
+        <svg viewBox="0 0 90 60" aria-hidden="true"><g class="away"><path fill="var(--marigold)" d="M10 30 L50 30 L41 43 L19 43Z M23 30 L30 12 L37 30Z"/></g><path d="M0 46 Q22 40 45 46 T90 46" fill="none" stroke="var(--water)" stroke-width="3"/></svg>
+        <h2 class="h">It's in the river now</h2>
+        <p>You won't know when it comes back. Neither will we.</p>
+        <button class="btn" id="writeAnother">Write another</button>
+      </div>
+    </section>
+
+    <section id="view-yours" class="view" aria-label="Yours">
+      <div id="yours"></div>
+    </section>
+  </main>
+</div>
+
+<nav class="tabs" aria-label="Sections"><div class="inner" role="tablist">
+  <button class="tab" role="tab" data-v="river" aria-selected="true">River</button>
+  <button class="tab" role="tab" data-v="write" aria-selected="false">Write</button>
+  <button class="tab" role="tab" data-v="yours" aria-selected="false">Yours</button>
+</div></nav>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Prototype controls</h2>
+    <p class="small">Not part of the app. Skip time to test returns, refills and notes from other people.</p>
+    <p>Prototype date: <b id="pdate"></b></p>
+    <div class="skips">
+      <button class="btn" data-skip="1">Skip a day</button>
+      <button class="btn" data-skip="30">Skip a month</button>
+      <button class="btn" data-skip="365">Skip a year</button>
+    </div>
+    <div id="debug"></div>
+    <div class="actions">
+      <button class="link" id="reset">Reset prototype</button>
+      <button class="btn solid" id="closeSheet">Close</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const DAY = 86400000, FREE = 5, WRITES_PER_DAY = 3, KEY = 'river-proto-v1';
+const RANGES = {near:[30,90], any:[30,1095], far:[730,1825]};
+const LABELS = {near:'Near future', any:'Anytime', far:'No time soon'};
+const SEEDS = [
+"If you're reading this on a bad day: it passes. I didn't believe that either, and here I am writing to a stranger.",
+"Called my dadi today just to hear her complain about the weather. Call yours if you still can.",
+"I quit the job everyone said was safe. It's been four months. I'm broke and I've never slept better.",
+"Somebody, somewhere, is proud of you and hasn't said it. I'm saying it for them.",
+"The chai at the station tastes better than any café chai. I will not be taking questions.",
+"I'm 34 and learning to swim. The kids in my class are 7. They're better than me and very kind about it.",
+"Today I finally told her. She said no. I'm weirdly relieved. Now I know.",
+"Whoever catches this: drink some water, then go outside for five minutes. That's the whole message.",
+"My mother learned WhatsApp just to send me good-morning flowers every day. I never reply. I should.",
+"Monsoon smell. That's it. If you know, you know.",
+"Rode 400 km alone this weekend. Didn't talk to anyone. Came back feeling like a person again.",
+"To the person who held the lift door for me on 3rd Feb: I was having the worst day. Thank you.",
+"It's okay to outgrow people. It's okay to miss them anyway.",
+"Learning guitar at 29. My fingers hurt. My neighbours hurt more.",
+"I keep a list of small things that went right. Today: the auto driver had change.",
+"Failed my exam for the second time. Trying a third. If you're also trying again, we're in this together.",
+"Grandpa planted a mango tree the year I was born. This summer it finally fruited. He didn't get to see it. I ate one for him.",
+"Write the email. Send the message. Book the ticket. The worst they can say is no.",
+"Moving to a new city means eating alone a lot. It gets better. Find one good dhaba.",
+"I think I'm finally happy and I'm scared to say it out loud. So I'm saying it here, where it floats away.",
+"Be patient with your parents' phones. They were patient with your handwriting.",
+"Saw the sunrise from a mountain today. Felt very small in the best way.",
+"Whatever you're waiting for, I hope it arrives on a random Tuesday when you least expect it."
+];
+const SAMPLE_NOTES = [
+"This found me on exactly the right day.","Thank you. I needed this more than you know.",
+"Sending it back downriver with a little extra hope.","Read this on the metro and smiled like an idiot.",
+"Same. Exactly the same.","Hope you're doing okay now, wherever you are.","Saved this one in my head.",
+"You made a stranger call their mom today.","Keep going.","Hi from Pune. This was lovely."
+];
+const BAD = ['fuck','shit','bitch','bastard','asshole','cunt','slut','whore','kys','kill yourself'];
+
+const $ = id => document.getElementById(id);
+const dayIdx = t => Math.floor(t / DAY);
+const fmt = t => new Date(t).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+const esc = s => s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rnd = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const ordinal = n => { const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
+
+function fresh(){
+  const now = Date.now();
+  return {now, catchDay:dayIdx(now), free:FREE, bonus:0, seen:[], reported:[], noted:[],
+    writesDay:dayIdx(now), writesToday:0, mine:[],
+    pool:SEEDS.map((t,i)=>({id:'s'+i, text:t, seenCount:rnd(12,420)}))};
+}
+function load(){ try{ const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+let S = load() || fresh();
+let cur = {type:'idle'};
+
+function refill(){
+  const d = dayIdx(S.now);
+  if (d > S.catchDay){ S.free = FREE; S.catchDay = d; }
+  if (d > S.writesDay){ S.writesToday = 0; S.writesDay = d; }
+}
+function blocked(t){
+  const low = t.toLowerCase();
+  if (BAD.some(w => new RegExp('\\b'+w+'\\b').test(low))) return 'That includes words the river doesn\u2019t carry. Try rewording it.';
+  if (/\b\d{10}\b/.test(t.replace(/[\s-]/g,'')) || /[^\s@]+@[^\s@]+\.[^\s@]+/.test(t)) return 'Remove phone numbers and email addresses. Messages stay anonymous.';
+  return '';
+}
+let tt;
+function toast(m){ const el=$('toast'); el.textContent=m; el.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>el.classList.remove('show'),2600); }
+
+function renderCount(){
+  refill();
+  const extra = S.bonus ? ` + ${S.bonus} extra` : '';
+  $('count').textContent = `${S.free} free catch${S.free===1?'':'es'} today${extra}`;
+}
+
+function renderStage(){
+  const st = $('stage');
+  if (cur.type === 'idle'){
+    st.innerHTML = `<p class="hint">Messages from strangers drift by here. Each one you catch, you'll only ever see once.</p>`;
+  } else if (cur.type === 'letter'){
+    const p = S.pool.find(x=>x.id===cur.id);
+    const noted = S.noted.includes(p.id);
+    st.innerHTML = `<article class="letter unfold">
+      <p class="msg">${esc(p.text)}</p>
+      <p class="meta">You're the ${ordinal(p.seenCount)} person to catch this.</p>
+      <div class="note-box">${noted
+        ? `<p class="small">Your note is tied to it now. Only the writer will ever read it.</p>`
+        : `<label for="note">Leave a note for the writer</label>
+           <textarea id="note" maxlength="140" rows="2" placeholder="Something short"></textarea>
+           <div class="row"><span class="small">Only the writer sees notes, if this ever drifts back to them.</span>
+           <button class="btn" data-act="note">Add note</button></div><p class="err" id="noteErr"></p>`}
+      </div>
+      <div class="actions"><button class="btn solid" data-act="letgo">Let it go</button><button class="link" data-act="report">Report</button></div>
+    </article>`;
+  } else if (cur.type === 'reveal'){
+    const m = S.mine.find(x=>x.id===cur.id);
+    const n = m.notes.length;
+    st.innerHTML = `<article class="letter reveal unfold">
+      <h2>This one is yours</h2>
+      <p class="msg">${esc(m.text)}</p>
+      <p class="stats">You wrote this on ${fmt(m.createdAt)}. Since then, ${m.seenCount} ${m.seenCount===1?'person has':'people have'} seen it and ${n} ${n===1?'left a note':'left notes'}.</p>
+      ${n ? `<ul class="notes">${m.notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      <button class="btn solid" data-act="keep">Keep it</button>
+    </article>`;
+  } else if (cur.type === 'out'){
+    st.innerHTML = `<div class="calm"><h2>That's today's catches</h2>
+      <p>Free catches refill tomorrow. You can also get more now.</p>
+      <button class="btn solid" data-act="buy">Get 10 more catches</button>
+      <div class="ad">Ad banner</div></div>`;
+  } else if (cur.type === 'empty'){
+    st.innerHTML = `<div class="calm"><h2>The river is calm</h2>
+      <p>You've read every message in it for now. New ones drift in as people write. Leave one for someone else.</p>
+      <button class="btn solid" data-act="towrite">Write a message</button>
+      <div class="ad">Ad banner</div></div>`;
+  }
+}
+
+function ripple(){ const r=$('ripple'); r.classList.remove('go'); void r.getBoundingClientRect(); r.classList.add('go'); }
+
+function catchOne(){
+  refill();
+  const ret = S.mine.find(m=>!m.returned && m.returnAt <= S.now);
+  if (ret){ cur={type:'reveal',id:ret.id}; ripple(); return done(); }
+  if (S.free + S.bonus <= 0){ cur={type:'out'}; return done(); }
+  const cand = S.pool.filter(p=>!S.seen.includes(p.id) && !S.reported.includes(p.id));
+  if (!cand.length){ cur={type:'empty'}; return done(); }
+  const p = cand[Math.floor(Math.random()*cand.length)];
+  S.seen.push(p.id); p.seenCount++;
+  if (S.free > 0) S.free--; else S.bonus--;
+  cur = {type:'letter', id:p.id}; ripple(); done();
+}
+function done(){ save(); renderCount(); renderStage(); }
+
+$('catchBtn').onclick = catchOne;
+$('stage').addEventListener('click', e=>{
+  const a = e.target.closest('[data-act]'); if(!a) return;
+  const act = a.dataset.act;
+  if (act==='letgo'){ cur={type:'idle'}; done(); }
+  else if (act==='report'){ S.reported.push(cur.id); cur={type:'idle'}; done(); toast('Reported. You won\u2019t see this again.'); }
+  else if (act==='note'){
+    const v = $('note').value.trim();
+    if (v.length < 2){ $('noteErr').textContent='Write something first.'; return; }
+    const b = blocked(v); if (b){ $('noteErr').textContent=b; return; }
+    S.noted.push(cur.id); done(); toast('Note added.');
+  }
+  else if (act==='keep'){
+    const m = S.mine.find(x=>x.id===cur.id); m.returned=true; m.returnedAt=S.now;
+    cur={type:'idle'}; done(); renderYours(); toast('Kept. Find it under Yours.');
+  }
+  else if (act==='buy'){ S.bonus += 10; cur={type:'idle'}; done(); toast('10 catches added. Prototype: no payment taken.'); }
+  else if (act==='towrite'){ go('write'); }
+});
+
+/* Write */
+function renderWrite(){
+  refill();
+  const left = WRITES_PER_DAY - S.writesToday;
+  $('writesLeft').textContent = `${left} of ${WRITES_PER_DAY} messages left today`;
+}
+$('msg').addEventListener('input', ()=>{ $('chars').textContent = `${$('msg').value.length} / 500`; $('writeErr').textContent=''; });
+$('send').onclick = ()=>{
+  refill();
+  const t = $('msg').value.trim();
+  const when = document.querySelector('input[name=when]:checked').value;
+  if (S.writesToday >= WRITES_PER_DAY){ $('writeErr').textContent='You\u2019ve sent today\u2019s messages. You can write more tomorrow.'; return; }
+  if (t.length < 20){ $('writeErr').textContent='Write at least 20 characters so it means something to whoever catches it.'; return; }
+  const b = blocked(t); if (b){ $('writeErr').textContent=b; return; }
+  const [a,z] = RANGES[when];
+  S.mine.push({id:'m'+Date.now(), text:t, option:when, createdAt:S.now, returnAt:S.now + rnd(a,z)*DAY, returned:false, seenCount:0, notes:[]});
+  S.writesToday++; save();
+  $('msg').value=''; $('chars').textContent='0 / 500';
+  $('writeForm').hidden = true; $('sentBox').hidden = false;
+  renderYours();
+};
+$('writeAnother').onclick = ()=>{ $('sentBox').hidden=true; $('writeForm').hidden=false; renderWrite(); };
+
+/* Yours */
+function renderYours(){
+  const drifting = S.mine.filter(m=>!m.returned).length;
+  const kept = S.mine.filter(m=>m.returned).sort((a,b)=>b.returnedAt-a.returnedAt);
+  let h = `<h1 class="h">Yours</h1>`;
+  h += drifting
+    ? `<p class="drifting">${drifting} message${drifting===1?'':'s'} drifting</p><p class="sub">They'll come back when the river brings them. Even we won't tell you when.</p>`
+    : `<p class="sub">Nothing of yours in the river yet.</p><button class="btn solid" id="yWrite">Write a message</button>`;
+  if (kept.length){
+    h += `<div class="kept">` + kept.map(m=>`<article class="letter reveal">
+      <p class="msg">${esc(m.text)}</p>
+      <p class="small">Written ${fmt(m.createdAt)}, came back ${fmt(m.returnedAt)}. Seen by ${m.seenCount}.</p>
+      ${m.notes.length ? `<details><summary>${m.notes.length} note${m.notes.length===1?'':'s'} from strangers</summary><ul class="notes" style="margin-top:10px">${m.notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
+    </article>`).join('') + `</div>`;
+  }
+  $('yours').innerHTML = h;
+  const yw = $('yWrite'); if (yw) yw.onclick = ()=>go('write');
+}
+
+/* Tabs */
+function go(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', t.dataset.v===v));
+  if (v==='write') renderWrite();
+  if (v==='yours') renderYours();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>go(t.dataset.v));
+
+/* Prototype controls */
+function renderSheet(){
+  $('pdate').textContent = fmt(S.now);
+  const live = S.mine.filter(m=>!m.returned);
+  $('debug').innerHTML = live.length
+    ? `<p class="small">Hidden from users, shown here for testing:</p><ul class="debug">${live.map(m=>`<li>\u201c${esc(m.text.slice(0,36))}\u2026\u201d ${LABELS[m.option]}, returns ${fmt(m.returnAt)}${m.returnAt<=S.now?' (due now, catch to see it)':''}</li>`).join('')}</ul>`
+    : `<p class="small">Write a message to see its hidden return date here.</p>`;
+}
+$('protoBtn').onclick = ()=>{ renderSheet(); $('sheet').hidden=false; };
+$('closeSheet').onclick = ()=>{ $('sheet').hidden=true; };
+$('sheet').addEventListener('click', e=>{ if(e.target.id==='sheet') $('sheet').hidden=true; });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') $('sheet').hidden=true; });
+document.querySelectorAll('[data-skip]').forEach(b=>b.onclick=()=>{
+  const days = +b.dataset.skip;
+  S.now += days*DAY;
+  S.mine.filter(m=>!m.returned).forEach(m=>{
+    const catches = Math.round(days*(0.2+Math.random()*1.1));
+    m.seenCount += catches;
+    for (let i=0;i<catches && m.notes.length<12;i++){
+      if (Math.random()<0.035) m.notes.push(SAMPLE_NOTES[rnd(0,SAMPLE_NOTES.length-1)]);
+    }
+  });
+  if (cur.type==='out' || cur.type==='empty') cur={type:'idle'};
+  refill(); save(); renderCount(); renderStage(); renderSheet(); renderWrite();
+  toast(`Skipped to ${fmt(S.now)}`);
+});
+$('reset').onclick = ()=>{ S=fresh(); cur={type:'idle'}; save(); renderCount(); renderStage(); renderYours(); renderSheet(); renderWrite();
+  $('sentBox').hidden=true; $('writeForm').hidden=false; toast('Prototype reset.'); };
+
+renderCount(); renderStage(); renderYours(); renderWrite();
+</script>
+</body>
+</html>

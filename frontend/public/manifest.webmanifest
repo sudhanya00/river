@@ -1,0 +1,10 @@
+{
+  "name": "River",
+  "short_name": "River",
+  "description": "Drop a message into the river. Catch one from a stranger. One day, yours comes back.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#E6EEEA",
+  "theme_color": "#1E3F47",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

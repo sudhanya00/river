@@ -1,0 +1,12 @@
+# One term per line, case-insensitive, matched on word boundaries.
+# Starts from the prototype list; Hindi/Hinglish terms get added in phase 3.
+fuck
+shit
+bitch
+bastard
+asshole
+cunt
+slut
+whore
+kys
+kill yourself

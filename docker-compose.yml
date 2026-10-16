@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: river
+      POSTGRES_PASSWORD: river
+      POSTGRES_DB: river
+    ports:
+      - "54329:5432"
+    volumes:
+      - river-db:/var/lib/postgresql/data
+      - ./backend/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U river"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  river-db:
