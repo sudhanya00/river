@@ -1,18 +1,21 @@
 import uuid
 from dataclasses import asdict
+from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from . import river
+from . import clock, river
 from .auth import UserId
 from .config import get_settings
 from .db import get_db
 from .schemas import (
     CatchOut,
     CaughtOut,
+    DevClockIn,
+    DevClockOut,
     MeOut,
     NoteIn,
     OutOfCatches,
@@ -81,15 +84,41 @@ def get_yours(db: Db, user_id: UserId):
 
 app.include_router(api)
 
-if get_settings().dev_mode:
-    dev = APIRouter(prefix="/api/dev", tags=["dev"])
 
-    @dev.post("/force-due")
-    def post_force_due(db: Db, user_id: UserId):
-        return {"made_due": river.dev_force_due(db, user_id)}
 
-    @dev.post("/refill", status_code=204)
-    def post_refill(db: Db, user_id: UserId):
-        river.dev_refill(db, user_id)
+def _dev_only() -> None:
+    # Checked per request (not just at startup) so dev routes can never answer outside dev mode.
+    if not get_settings().dev_mode:
+        raise HTTPException(404, "Not found")
 
-    app.include_router(dev)
+
+dev = APIRouter(prefix="/api/dev", tags=["dev"], dependencies=[Depends(_dev_only)])
+
+
+@dev.post("/force-due")
+def post_force_due(db: Db, user_id: UserId):
+    return {"made_due": river.dev_force_due(db, user_id)}
+
+
+@dev.post("/refill", status_code=204)
+def post_refill(db: Db, user_id: UserId):
+    river.dev_refill(db, user_id)
+
+
+def _clock_out() -> DevClockOut:
+    return DevClockOut(now=clock.now(), offset_days=clock.offset() / timedelta(days=1))
+
+
+@dev.get("/clock", response_model=DevClockOut)
+def get_clock():
+    return _clock_out()
+
+
+@dev.post("/clock", response_model=DevClockOut)
+def post_clock(body: DevClockIn):
+    """The offset is global to the server process: every user sees the same moved clock."""
+    clock.set_offset(timedelta(0) if body.reset else clock.offset() + timedelta(days=body.add_days))
+    return _clock_out()
+
+
+app.include_router(dev)

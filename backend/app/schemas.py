@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class MeOut(BaseModel):
+    tz: str  # IANA zone; refills happen at local midnight here
     free_catches: int
     bonus_catches: int
     writes_left: int
@@ -65,3 +66,15 @@ class ReturnedOut(BaseModel):
 class YoursOut(BaseModel):
     drifting: int
     returned: list[ReturnedOut]
+
+
+class DevClockIn(BaseModel):
+    """Dev only. Move the clock forward by some days, or back to real time."""
+
+    add_days: int = Field(default=0, ge=0, le=36500)
+    reset: bool = False
+
+
+class DevClockOut(BaseModel):
+    now: datetime
+    offset_days: float

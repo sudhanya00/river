@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api, ApiError, type Yours } from './api'
+import { signOut } from './auth'
 import { fmtDate, plural } from './format'
 
-type Props = { goWrite: () => void; toast: (m: string) => void }
+type Props = { email: string | null; goWrite: () => void; toast: (m: string) => void }
 
-export default function YoursView({ goWrite, toast }: Props) {
+export default function YoursView({ email, goWrite, toast }: Props) {
   const [data, setData] = useState<Yours | null>(null)
 
   useEffect(() => {
@@ -43,6 +44,11 @@ export default function YoursView({ goWrite, toast }: Props) {
             </article>
           ))}
         </div>
+      )}
+      {email && (
+        <p className="account small">
+          Signed in as {email}. <button className="link" onClick={signOut}>Sign out</button>
+        </p>
       )}
     </section>
   )

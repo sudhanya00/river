@@ -1,8 +1,17 @@
-// Phase 2 replaces this with the user's own time zone from /me.
-const TZ = 'Asia/Kolkata'
+// Dates show in the user's own zone (from /me), which is also where their daily refill happens.
+let tz = 'Asia/Kolkata'
+
+export function setTimeZone(zone: string) {
+  try {
+    new Intl.DateTimeFormat('en-IN', { timeZone: zone })
+    tz = zone
+  } catch {
+    /* unknown zone: keep the default */
+  }
+}
 
 export const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: TZ })
+  new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: tz })
 
 export const ordinal = (n: number) => {
   const s = ['th', 'st', 'nd', 'rd']

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, type Me } from './api'
+import { api, devUser, type Me } from './api'
+import { useSession } from './auth'
+import AuthView from './AuthView'
 import DevPanel from './DevPanel'
+import { setTimeZone } from './format'
 import RiverView from './RiverView'
 import WriteView from './WriteView'
 import YoursView from './YoursView'
@@ -26,12 +29,23 @@ function useToast() {
 }
 
 export default function App() {
+  const { ready, session } = useSession()
+  if (!ready) return null
+  if (!session && !devUser()) return <AuthView />
+  // Keyed on the user so switching accounts starts from a clean slate.
+  return <Signed key={session?.user.id ?? devUser()} email={session?.user.email ?? null} />
+}
+
+function Signed({ email }: { email: string | null }) {
   const [view, setView] = useState<View>('river')
   const [me, setMe] = useState<Me | null>(null)
   const { msg, show, toast } = useToast()
 
   const refreshMe = useCallback(() => {
-    api.me().then(setMe, () => {})
+    api.me().then((m) => {
+      setTimeZone(m.tz)
+      setMe(m)
+    }, () => {})
   }, [])
   useEffect(refreshMe, [refreshMe])
 
@@ -50,7 +64,7 @@ export default function App() {
         <header className="top">
           <div className="mark">river</div>
           <div className="count">{count}</div>
-          {import.meta.env.DEV && <DevPanel onChanged={refreshMe} toast={toast} />}
+          {import.meta.env.DEV && <DevPanel email={email} onChanged={refreshMe} toast={toast} />}
         </header>
         <main>
           {/* River stays mounted so a caught card survives a quick look at another tab. */}
@@ -58,7 +72,7 @@ export default function App() {
             <RiverView onChanged={refreshMe} toast={toast} goWrite={() => go('write')} />
           </div>
           {view === 'write' && <WriteView me={me} onChanged={refreshMe} />}
-          {view === 'yours' && <YoursView goWrite={() => go('write')} toast={toast} />}
+          {view === 'yours' && <YoursView email={email} goWrite={() => go('write')} toast={toast} />}
         </main>
       </div>
 

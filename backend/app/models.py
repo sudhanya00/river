@@ -16,6 +16,13 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from . import clock
+
+
+def _now() -> datetime:
+    # Looked up at call time so the dev clock offset (and test patches of clock.now) apply.
+    return clock.now()
+
 
 class Base(DeclarativeBase):
     pass
@@ -25,7 +32,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, server_default=func.now())
     tz: Mapped[str] = mapped_column(Text, server_default="Asia/Kolkata")
     free_catches: Mapped[int] = mapped_column(Integer, server_default="5")
     free_refilled_on: Mapped[date] = mapped_column(Date, server_default=func.current_date())
@@ -57,7 +64,7 @@ class Message(Base):
     )
     text: Mapped[str] = mapped_column(Text)
     return_option: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, server_default=func.now())
     return_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     returned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(Text, server_default="active")
@@ -80,7 +87,7 @@ class Catch(Base):
     message_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("messages.id", ondelete="CASCADE"), primary_key=True
     )
-    caught_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    caught_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, server_default=func.now())
     note: Mapped[str | None] = mapped_column(Text)
     noted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -96,7 +103,7 @@ class Report(Base):
     )
     target_type: Mapped[str] = mapped_column(Text, primary_key=True)
     target_id: Mapped[str] = mapped_column(Text, primary_key=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, server_default=func.now())
 
 
 class Purchase(Base):
@@ -110,4 +117,4 @@ class Purchase(Base):
     provider_ref: Mapped[str] = mapped_column(Text, unique=True)
     catches: Mapped[int] = mapped_column(Integer)
     amount_paise: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, server_default=func.now())

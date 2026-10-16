@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     // The client filter imports ../backend/app/wordlist.txt so both sides share one list.
     fs: { allow: ['..'] },
-    proxy: { '/api': 'http://127.0.0.1:8000' },
+    // RIVER_API_URL lets a second dev stack run beside the default one (e.g. API on another port).
+    proxy: { '/api': process.env.RIVER_API_URL || 'http://127.0.0.1:8000' },
   },
 })

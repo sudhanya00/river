@@ -142,3 +142,13 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
 .dev-btn{border:1px dashed var(--line);background:transparent;border-radius:999px;padding:4px 10px;font-size:.78rem;color:var(--muted)}
 .dev-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .dev-row input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+
+/* Auth */
+.auth{padding-top:8px}
+.intro{margin:6px 0 18px;padding-left:1.1em;display:grid;gap:8px}
+.intro li::marker{color:var(--marigold)}
+.field{display:block;width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:6px}
+.or{display:flex;align-items:center;gap:10px;margin:18px 0 10px;color:var(--muted);font-size:.8rem}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.account{margin-top:28px;border-top:1px solid var(--line);padding-top:12px}
+.dev-clock{font-variant-numeric:tabular-nums}

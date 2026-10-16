@@ -1,6 +1,7 @@
 // Thin client for the FastAPI backend. Responses never carry author ids or return dates.
+import { accessToken, browserTimeZone, signOut, supabase } from './auth'
 
-export type Me = { free_catches: number; bonus_catches: number; writes_left: number; drifting: number }
+export type Me = { tz: string; free_catches: number; bonus_catches: number; writes_left: number; drifting: number }
 
 export type CatchResult =
   | { type: 'message'; id: string; text: string; catch_number: number }
@@ -31,17 +32,22 @@ export class ApiError extends Error {
 
 const DEV_USER_KEY = 'river-dev-user'
 
+// Dev builds only: a fake user sent as X-Dev-User, which the API accepts only in dev mode.
+// Without Supabase configured it defaults to 'asha' so the core loop works with no setup.
 export function devUser(): string {
+  if (!import.meta.env.DEV) return ''
+  const fallback = supabase ? '' : 'asha'
   try {
-    return localStorage.getItem(DEV_USER_KEY) || 'asha'
+    return localStorage.getItem(DEV_USER_KEY) || fallback
   } catch {
-    return 'asha'
+    return fallback
   }
 }
 
 export function setDevUser(name: string) {
   try {
-    localStorage.setItem(DEV_USER_KEY, name)
+    if (name) localStorage.setItem(DEV_USER_KEY, name)
+    else localStorage.removeItem(DEV_USER_KEY)
   } catch {
     /* private mode: falls back to the default user */
   }
@@ -50,7 +56,11 @@ export function setDevUser(name: string) {
 export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  if (import.meta.env.DEV) headers['X-Dev-User'] = devUser()
+  const tz = browserTimeZone()
+  if (tz) headers['X-Timezone'] = tz // only used when the account is first created
+  const token = await accessToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  else if (import.meta.env.DEV && devUser()) headers['X-Dev-User'] = devUser()
 
   let res: Response
   try {
@@ -60,6 +70,7 @@ export async function call<T>(method: string, path: string, body?: unknown): Pro
   }
   if (res.status === 204) return undefined as T
   const data = await res.json().catch(() => null)
+  if (res.status === 401 && token) await signOut() // expired or revoked: back to the sign-in screen
   if (!res.ok) {
     const detail = typeof data?.detail === 'string' ? data.detail : 'Something went wrong. Try again.'
     throw new ApiError(res.status, detail)

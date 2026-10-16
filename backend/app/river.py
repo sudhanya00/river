@@ -25,11 +25,22 @@ class RiverError(Exception):
 
 # ---- users -----------------------------------------------------------------
 
-def ensure_user(db: Session, user_id: uuid.UUID) -> None:
+def ensure_user(db: Session, user_id: uuid.UUID, tz: str | None = None) -> None:
+    """Creates the user on first sight. `tz` (the browser's IANA zone) is only used then."""
     s = get_settings()
+    tz = tz or s.default_tz
+    now = clock.now()
+    today = now.astimezone(ZoneInfo(tz)).date()
     db.execute(
         insert(User)
-        .values(id=user_id, tz=s.default_tz, free_catches=s.free_catches_per_day)
+        .values(
+            id=user_id,
+            created_at=now,
+            tz=tz,
+            free_catches=s.free_catches_per_day,
+            free_refilled_on=today,
+            writes_counted_on=today,
+        )
         .on_conflict_do_nothing(index_elements=[User.id])
     )
     db.commit()
@@ -51,10 +62,12 @@ def _local_today(user: User) -> date:
 def _refresh_daily(user: User) -> None:
     s = get_settings()
     today = _local_today(user)
-    if user.free_refilled_on < today:
+    # "!=" rather than "<": the dev clock can move back, and a stored date ahead of today
+    # would otherwise block refills until real time caught up.
+    if user.free_refilled_on != today:
         user.free_catches = s.free_catches_per_day
         user.free_refilled_on = today
-    if user.writes_counted_on < today:
+    if user.writes_counted_on != today:
         user.writes_today = 0
         user.writes_counted_on = today
 
@@ -69,6 +82,7 @@ def _drifting_count(db: Session, user_id: uuid.UUID) -> int:
 
 @dataclass
 class Me:
+    tz: str
     free_catches: int
     bonus_catches: int
     writes_left: int
@@ -78,6 +92,7 @@ class Me:
 def me(db: Session, user_id: uuid.UUID) -> Me:
     user = _lock_user(db, user_id)
     result = Me(
+        tz=user.tz,
         free_catches=user.free_catches,
         bonus_catches=user.bonus_catches,
         writes_left=max(0, get_settings().writes_per_day - user.writes_today),
@@ -114,11 +129,14 @@ def write(db: Session, user_id: uuid.UUID, text: str, return_option: str) -> uui
         db.rollback()
         raise
 
+    # The cooling period wins over a range configured below it.
     lo, hi = s.return_ranges[return_option]
     lo = max(lo, s.cooling_days)
-    return_at = clock.now() + timedelta(seconds=random.randint(lo * 86400, hi * 86400))
+    hi = max(hi, lo)
+    now = clock.now()
+    return_at = now + timedelta(seconds=random.randint(lo * 86400, hi * 86400))
 
-    msg = Message(author_id=user_id, text=text, return_option=return_option, return_at=return_at)
+    msg = Message(author_id=user_id, text=text, return_option=return_option, created_at=now, return_at=return_at)
     db.add(msg)
     user.writes_today += 1
     db.commit()
@@ -210,7 +228,7 @@ def catch(db: Session, user_id: uuid.UUID) -> Caught | Reveal | str:
         return "river_empty"
 
     # 4. Record and spend.
-    db.add(Catch(user_id=user_id, message_id=msg.id))
+    db.add(Catch(user_id=user_id, message_id=msg.id, caught_at=clock.now()))
     if user.free_catches > 0:
         user.free_catches -= 1
     else:
@@ -273,7 +291,7 @@ def report_message(db: Session, user_id: uuid.UUID, message_id: uuid.UUID) -> No
     # RETURNING, not rowcount: ORM-executed inserts report rowcount -1, which would count repeats.
     inserted = db.execute(
         insert(Report)
-        .values(reporter_id=user_id, target_type="message", target_id=str(message_id))
+        .values(reporter_id=user_id, target_type="message", target_id=str(message_id), created_at=clock.now())
         .on_conflict_do_nothing()
         .returning(Report.reporter_id)
     ).first()
