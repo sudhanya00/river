@@ -9,13 +9,19 @@ is the visual reference.
 - `backend/` FastAPI + SQLAlchemy + Alembic. All river rules are in `app/river.py`.
   `return_at` and `author_id` never leave the server (see `app/schemas.py`).
 - `frontend/` React + Vite + TypeScript PWA, ported from the prototype.
-- `docker-compose.yml` Postgres 16 on `localhost:54329` (databases `river` and `river_test`).
+- Postgres 16 on `localhost:54329`, databases `river` and `river_test`, role `river` / password `river`
+  (dev only). Either a native install or `docker-compose.yml`.
 
 ## Run locally (phase 1, fake auth)
 
-```bash
-docker compose up -d db
-```
+Postgres, one of:
+
+- **Native** (what this machine uses): `winget install PostgreSQL.PostgreSQL.16` with
+  `--override "--mode unattended --superpassword <pick one> --serverport 54329"`, then as `postgres`:
+  `create role river login password 'river'; create database river owner river; create database river_test owner river;`
+- **Docker**: `docker compose up -d db` (creates both databases on first start).
+
+Then:
 
 ```bash
 cd backend && python -m venv .venv && .venv/Scripts/pip install -r requirements-dev.txt

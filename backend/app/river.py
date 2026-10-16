@@ -270,12 +270,14 @@ def report_message(db: Session, user_id: uuid.UUID, message_id: uuid.UUID) -> No
     """The reporter has already caught it, so the no-repeats rule hides it from them."""
     if not _has_caught(db, user_id, message_id):
         raise RiverError(404, "You can only report messages you caught.")
+    # RETURNING, not rowcount: ORM-executed inserts report rowcount -1, which would count repeats.
     inserted = db.execute(
         insert(Report)
         .values(reporter_id=user_id, target_type="message", target_id=str(message_id))
         .on_conflict_do_nothing()
-    ).rowcount
-    if inserted:
+        .returning(Report.reporter_id)
+    ).first()
+    if inserted is not None:
         db.execute(
             update(Message).where(Message.id == message_id).values(report_count=Message.report_count + 1)
         )

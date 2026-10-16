@@ -40,6 +40,7 @@ def seed(db, author: str, n: int, return_in_days: int = 400) -> list[uuid.UUID]:
 
 
 def set_catches(db, name: str, free: int, bonus: int = 0) -> None:
+    river.ensure_user(db, dev_user_id(name))
     db.execute(update(User).where(User.id == dev_user_id(name)).values(free_catches=free, bonus_catches=bonus))
     db.commit()
 
