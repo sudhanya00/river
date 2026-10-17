@@ -12,7 +12,7 @@ is the visual reference.
 - Postgres 16 on `localhost:54329`, databases `river` and `river_test`, role `river` / password `river`
   (dev only). Either a native install or `docker-compose.yml`.
 
-## Run locally (phase 1, fake auth)
+## Run locally
 
 Postgres, one of:
 
@@ -21,7 +21,10 @@ Postgres, one of:
   `create role river login password 'river'; create database river owner river; create database river_test owner river;`
 - **Docker**: `docker compose up -d db` (creates both databases on first start).
 
-Then:
+Then copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`
+(both gitignored) and fill in the Supabase project URL and anon key. Sign-in is Supabase Auth
+(Google and email magic link); Supabase is used for auth only, all river data stays in our Postgres.
+Without Supabase values the app falls back to a fake dev user.
 
 ```bash
 cd backend && python -m venv .venv && .venv/Scripts/pip install -r requirements-dev.txt
@@ -39,9 +42,26 @@ cd backend && .venv/Scripts/uvicorn app.main:app --reload --port 8000
 cd frontend && npm install && npm run dev
 ```
 
-Open http://localhost:5173. In dev, the **Dev** pill in the header switches the fake user
-(sent as `X-Dev-User`), makes your drifting messages due, and refills catches. It is not
-rendered in production builds, and the backend refuses `/api/dev/*` unless `RIVER_DEV_MODE=true`.
+Open http://localhost:5173. In dev, the **Dev** pill in the header switches to a fake user
+(sent as `X-Dev-User`), moves the server clock forward a day / month / year, makes your drifting
+messages due, and refills catches. It is not rendered in production builds, and the backend
+refuses `X-Dev-User` and `/api/dev/*` unless `RIVER_DEV_MODE=true`.
+
+## Messages from the river (seeds)
+
+Seeds keep the river from running dry. A user catches them only after reading every real message;
+they're labelled "From the river" and take no notes (nobody would read them). They live in
+`backend/app/seeds.txt`, one paragraph each, and `python -m app.seed` loads new ones (it's
+idempotent and refuses the file if any seed fails the length or content checks).
+
+To draft more with Claude Haiku (dev only, needs `ANTHROPIC_API_KEY` or `ant auth login`):
+
+```bash
+cd backend && .venv/Scripts/python -m app.generate_seeds 40
+```
+
+That writes `backend/seeds/candidates.txt` (gitignored). Read them, copy the keepers into
+`app/seeds.txt`, then run `python -m app.seed`. Nothing generated reaches the river unreviewed.
 
 ## Tests
 

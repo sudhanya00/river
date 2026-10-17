@@ -4,7 +4,7 @@ import { accessToken, browserTimeZone, signOut, supabase } from './auth'
 export type Me = { tz: string; free_catches: number; bonus_catches: number; writes_left: number; drifting: number }
 
 export type CatchResult =
-  | { type: 'message'; id: string; text: string; catch_number: number }
+  | { type: 'message'; id: string; text: string; catch_number: number; from_river: boolean }
   | { type: 'reveal'; id: string; text: string; written_at: string; seen_count: number; notes: string[] }
   | { type: 'out_of_catches' }
   | { type: 'river_empty' }

@@ -6,3 +6,6 @@ __pycache__/
 node_modules/
 dist/
 .env
+
+# Generated seed drafts awaiting review (backend/app/generate_seeds.py)
+backend/seeds/

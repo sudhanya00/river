@@ -19,6 +19,7 @@ class CaughtOut(BaseModel):
     id: uuid.UUID
     text: str
     catch_number: int
+    from_river: bool  # a seed message, not written by a person; takes no notes
 
 
 class RevealOut(BaseModel):

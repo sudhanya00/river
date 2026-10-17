@@ -150,6 +150,7 @@ class Caught:
     id: uuid.UUID
     text: str
     catch_number: int
+    from_river: bool  # a seed message: labelled in the app, takes no notes
 
 
 @dataclass
@@ -176,17 +177,22 @@ def _notes(db: Session, message_id: uuid.UUID) -> list[str]:
 
 
 def _pick_random(db: Session, user_id: uuid.UUID) -> Message | None:
+    """A random unseen message from someone else. Seeds only once every real message has been seen."""
     already_seen = exists().where(Catch.user_id == user_id, Catch.message_id == Message.id)
-    base = select(Message).where(
-        Message.status == "active",
-        Message.author_id != user_id,
-        ~already_seen,
-    )
-    r = random.random()
-    msg = db.scalars(base.where(Message.rand_key >= r).order_by(Message.rand_key).limit(1)).first()
-    if msg is None:  # wrap around from 0
-        msg = db.scalars(base.where(Message.rand_key < r).order_by(Message.rand_key).limit(1)).first()
-    return msg
+    for source in ("user", "seed"):
+        base = select(Message).where(
+            Message.source == source,
+            Message.status == "active",
+            Message.author_id != user_id,
+            ~already_seen,
+        )
+        r = random.random()
+        msg = db.scalars(base.where(Message.rand_key >= r).order_by(Message.rand_key).limit(1)).first()
+        if msg is None:  # wrap around from 0
+            msg = db.scalars(base.where(Message.rand_key < r).order_by(Message.rand_key).limit(1)).first()
+        if msg is not None:
+            return msg
+    return None
 
 
 def catch(db: Session, user_id: uuid.UUID) -> Caught | Reveal | str:
@@ -234,7 +240,9 @@ def catch(db: Session, user_id: uuid.UUID) -> Caught | Reveal | str:
     else:
         user.bonus_catches -= 1
     db.flush()
-    caught = Caught(id=msg.id, text=msg.text, catch_number=_seen_count(db, msg.id))
+    caught = Caught(
+        id=msg.id, text=msg.text, catch_number=_seen_count(db, msg.id), from_river=msg.source == "seed"
+    )
     db.commit()
     return caught
 
@@ -268,13 +276,16 @@ def add_note(db: Session, user_id: uuid.UUID, message_id: uuid.UUID, note: str) 
     if reason := content_filter.check(note):
         raise RiverError(422, reason)
 
+    is_seed = exists().where(Message.id == message_id, Message.source == "seed")
     res = db.execute(
         update(Catch)
-        .where(Catch.user_id == user_id, Catch.message_id == message_id, Catch.note.is_(None))
+        .where(Catch.user_id == user_id, Catch.message_id == message_id, Catch.note.is_(None), ~is_seed)
         .values(note=note, noted_at=clock.now())
     )
     db.commit()
     if res.rowcount == 0:
+        if db.scalar(select(is_seed)):
+            raise RiverError(422, "Messages from the river don’t take notes.")
         if _has_caught(db, user_id, message_id):
             raise RiverError(409, "You’ve already left a note on this one.")
         raise RiverError(404, "You can only leave notes on messages you caught.")

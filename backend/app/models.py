@@ -47,7 +47,8 @@ class Message(Base):
         CheckConstraint("char_length(text) between 20 and 500", name="text_length"),
         CheckConstraint("return_option in ('near','any','far')", name="return_option"),
         CheckConstraint("status in ('active','hidden','deleted')", name="status"),
-        Index("ix_messages_status_rand", "status", "rand_key"),
+        CheckConstraint("source in ('user','seed')", name="source"),
+        Index("ix_messages_source_status_rand", "source", "status", "rand_key"),
         Index(
             "ix_messages_author_due",
             "author_id",
@@ -68,6 +69,8 @@ class Message(Base):
     return_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     returned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(Text, server_default="active")
+    # 'seed' = from the river itself (app/seed.py): caught only after every real message, no notes.
+    source: Mapped[str] = mapped_column(Text, server_default="user")
     report_count: Mapped[int] = mapped_column(Integer, server_default="0")
     rand_key: Mapped[float] = mapped_column(Double, server_default=func.random())
 

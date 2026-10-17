@@ -152,3 +152,7 @@ details summary{cursor:pointer;font-size:.88rem;color:var(--muted)}
 .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
 .account{margin-top:28px;border-top:1px solid var(--line);padding-top:12px}
 .dev-clock{font-variant-numeric:tabular-nums}
+
+/* Seed messages: from the river itself, not a person */
+.from-river-tag{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+.from-river .msg{font-style:italic}

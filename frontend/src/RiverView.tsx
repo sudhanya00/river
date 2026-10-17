@@ -113,10 +113,12 @@ export default function RiverView({ onChanged, toast, goWrite }: Props) {
       break
     case 'message':
       card = (
-        <article className="letter unfold" key={stage.id}>
+        <article className={'letter unfold' + (stage.from_river ? ' from-river' : '')} key={stage.id}>
+          {stage.from_river && <p className="from-river-tag">From the river</p>}
           <p className="msg">{stage.text}</p>
           <p className="meta">You're the {ordinal(stage.catch_number)} person to catch this.</p>
-          <NoteBox id={stage.id} toast={toast} />
+          {/* No one wrote a river message, so a note would never be read. */}
+          {!stage.from_river && <NoteBox id={stage.id} toast={toast} />}
           <div className="actions">
             <button className="btn solid" onClick={() => setStage({ type: 'idle' })}>Let it go</button>
             <button className="link" onClick={() => act(() => api.report(stage.id), 'Reported. You won’t see this again.')}>Report</button>
