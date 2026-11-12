@@ -25,7 +25,7 @@ export default function YoursView({ email, goWrite, toast }: Props) {
         </>
       ) : (
         <>
-          <p className="sub">Nothing of yours in the river yet.</p>
+          <p className="sub">{returned.length > 0 ? 'Nothing of yours is drifting right now.' : 'Nothing of yours in the river yet.'}</p>
           <button className="btn solid" onClick={goWrite}>Write a message</button>
         </>
       )}
